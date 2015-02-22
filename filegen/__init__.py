@@ -83,8 +83,8 @@ class Writer(object):
         sys.stdout.write("\n")
 
     def emit_directory(self, d, indent):
+        self.output("{}d:{}".format(" " * indent, d.path))
         for f in d.files:
-            self.output("{}d:{}".format(" " * indent, d.path))
             if isinstance(f, Directory):
                 self.emit_directory(f, indent + 1)
             else:
