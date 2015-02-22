@@ -10,13 +10,33 @@ Directory = namedtuple("Directory", "name path files")
 File = namedtuple("File", "name path io")
 
 
+class LazyPath(object):
+    def __init__(self, values):
+        self.values = values
+
+    def __str__(self):
+        return os.path.join(*[str(x) for x in self.values])
+
+
+class LazyString(object):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return self.value
+
+    def change(self, value):
+        self.value = value
+
+
 class Filegen(object):
     def __init__(self, curdir="."):
-        self.scope = [curdir]
-        self.frame = [Directory(name=curdir, path=curdir, files=[])]
+        self.curdir = LazyString(curdir)
+        self.scope = [self.curdir]
+        self.frame = [Directory(name=self.curdir, path=self.curdir, files=[])]
 
     def fullpath(self):
-        return os.path.join(*self.scope)
+        return LazyPath(self.scope[:])
 
     @contextlib.contextmanager
     def dir(self, name):
@@ -35,13 +55,19 @@ class Filegen(object):
         self.frame[-1].files.append(File(name=name, path=self.fullpath(), io=writer))
         self.scope.pop()
 
-    def write(self, limit=80):
+    def to_string(self, curdir=None, limit=80):
+        if curdir is not None:
+            self.curdir.change(curdir)
         return Writer(limit).emit(self)
 
-    def to_python_module(self, overwrite=True):
+    def to_python_module(self, curdir=None, overwrite=True):
+        if curdir is not None:
+            self.curdir.change(curdir)
         return PythonModuleMaker(overwrite).emit(self)
 
-    def to_directory(self, overwrite=True):
+    def to_directory(self, curdir=None, overwrite=True):
+        if curdir is not None:
+            self.curdir.change(curdir)
         return DirectoryMaker(overwrite).emit(self)
 
 
@@ -80,8 +106,8 @@ class DirectoryMaker(object):
         sys.stdout.write("\n")
 
     def emit_directory(self, d):
-        if not os.path.exists(d.path):
-            os.mkdir(d.path)
+        if not os.path.exists(str(str(d.path))):
+            os.mkdir(str(str(d.path)))
 
     def branch_directory(self, d):
         self.emit_directory(d)
@@ -92,7 +118,7 @@ class DirectoryMaker(object):
                 self.emit_file(f)
 
     def emit_file(self, f):
-        with open(f.path, "w") as wf:
+        with open(str(f.path), "w") as wf:
             shutil.copyfileobj(f.io, wf)
 
     def emit(self, fg):
@@ -102,7 +128,26 @@ class DirectoryMaker(object):
 class PythonModuleMaker(DirectoryMaker):
     def emit_directory(self, d):
         super(PythonModuleMaker, self).emit_directory(d)
-        initfile = os.path.join(d.path, "__init__.py")
+        initfile = os.path.join(str(d.path), "__init__.py")
         if not os.path.exists(initfile):
             with open(initfile, "w"):
                 pass
+
+
+class FilegenApplication(object):
+    def run(self, method, *args, **kwargs):
+        import sys
+        try:
+            curdir = sys.argv[1]
+        except IndexError:
+            curdir = os.getcwd()
+        method(curdir=curdir, **kwargs)
+
+if __name__ == "__main__":
+    fg = Filegen()
+    with fg.dir("foo"):
+        with fg.file("bar.py") as wf:
+            wf.write("# this is comment file")
+        with fg.file("readme.txt") as wf:
+            wf.write("# foo")
+    FilegenApplication().run(fg.to_string)
