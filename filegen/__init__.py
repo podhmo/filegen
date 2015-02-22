@@ -119,6 +119,7 @@ class DirectoryMaker(object):
 
     def emit_file(self, f):
         with open(str(f.path), "w") as wf:
+            f.io.seek(0)
             shutil.copyfileobj(f.io, wf)
 
     def emit(self, fg):
