@@ -30,7 +30,7 @@ testing_extras = tests_require + [
 ]
 
 setup(name='filegen',
-      version='0.1',
+      version='0.1.1',
       description='file structure generator with onefile script',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
@@ -40,7 +40,7 @@ setup(name='filegen',
       keywords='',
       author="",
       author_email="",
-      url="",
+      url="https://github.com/podhmo/filegen",
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
