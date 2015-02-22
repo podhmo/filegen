@@ -57,18 +57,21 @@ class Filegen(object):
 
     def to_string(self, curdir=None, limit=80):
         if curdir is not None:
-            self.curdir.change(curdir)
+            self.change(curdir)
         return Writer(limit).emit(self)
 
     def to_python_module(self, curdir=None, overwrite=True):
         if curdir is not None:
-            self.curdir.change(curdir)
+            self.change(curdir)
         return PythonModuleMaker(overwrite).emit(self)
 
     def to_directory(self, curdir=None, overwrite=True):
         if curdir is not None:
-            self.curdir.change(curdir)
+            self.change(curdir)
         return DirectoryMaker(overwrite).emit(self)
+
+    def change(self, curdir):
+        self.curdir.change(curdir)
 
 
 class Writer(object):
