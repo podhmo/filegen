@@ -30,7 +30,7 @@ testing_extras = tests_require + [
 ]
 
 setup(name='filegen',
-      version='0.1.1',
+      version='0.1.2',
       description='file structure generator with onefile script',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
