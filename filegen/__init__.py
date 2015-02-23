@@ -3,7 +3,10 @@ import sys
 import contextlib
 import os.path
 import shutil
-from io import StringIO
+if int(sys.version[0]) >= 3:
+    from io import StringIO as IO
+else:
+    from io import BytesIO as IO
 from collections import namedtuple
 
 Directory = namedtuple("Directory", "name path files")
@@ -50,7 +53,7 @@ class Filegen(object):
     @contextlib.contextmanager
     def file(self, name):
         self.scope.append(name)
-        writer = StringIO()
+        writer = IO()
         yield writer
         self.frame[-1].files.append(File(name=name, path=self.fullpath(), io=writer))
         self.scope.pop()
