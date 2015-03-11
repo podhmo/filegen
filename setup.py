@@ -31,6 +31,7 @@ testing_extras = tests_require + [
 
 codegen_extras = [
     'prestring',
+    'mako'
 ]
 
 setup(name='filegen',
