@@ -158,6 +158,7 @@ class FilegenApplication(object):
         import sys
         logging.basicConfig(level=logging.INFO)
         args = self.parse(sys.argv[1:])
+
         if args.action == "python":
             if callable(fg):
                 fg = fg()
