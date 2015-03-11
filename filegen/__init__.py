@@ -8,6 +8,9 @@ if int(sys.version[0]) >= 3:
 else:
     from io import BytesIO as IO
 from collections import namedtuple
+from prestring.python import PythonModule
+import logging
+logger = logging.getLogger(__name__)
 
 
 Directory = namedtuple("Directory", "name path files")
@@ -113,8 +116,9 @@ class DirectoryMaker(object):
         sys.stdout.write("\n")
 
     def emit_directory(self, d):
-        if not os.path.exists(str(str(d.path))):
-            os.mkdir(str(str(d.path)))
+        if not os.path.exists(str(d.path)):
+            logger.info('[d] create: %s', d.path)
+            os.mkdir(str(d.path))
 
     def branch_directory(self, d):
         self.emit_directory(d)
@@ -125,6 +129,7 @@ class DirectoryMaker(object):
                 self.emit_file(f)
 
     def emit_file(self, f):
+        logger.info('[f] create: %s', f.path)
         with open(str(f.path), "w") as wf:
             f.io.seek(0)
             shutil.copyfileobj(f.io, wf)
@@ -137,17 +142,67 @@ class PythonModuleMaker(DirectoryMaker):
     def emit_directory(self, d):
         super(PythonModuleMaker, self).emit_directory(d)
         initfile = os.path.join(str(d.path), "__init__.py")
+        logger.info('[f] create: %s', initfile)
         if not os.path.exists(initfile):
             with open(initfile, "w"):
                 pass
+
+
+class CodeGenerator(object):
+    def __init__(self, fg, varname="rootpath", m=None):
+        self.fg = fg
+        self.rootpath = str(fg.frame[0].path)
+        self.varname = varname
+        self.m = m or PythonModule(import_unique=True)
+
+    def virtualpath(self, f):
+        self.m.from_("os.path", "join")
+        return "join({}, '{}')".format(self.varname, str(f.path).replace(self.rootpath, "").lstrip("/"))
+
+    def emit(self, io=sys.stdout):
+        m = self.m
+        m.import_("sys")
+        m.import_("logging")
+        m.stmt("logger = logging.getLogger(__name__)")
+        m.sep()
+
+        with m.def_("gen", self.varname):
+            self.branch_directory(fg.frame[0])
+        with m.main():
+            m.stmt("logging.basicConfig(level=logging.INFO)")
+            m.stmt("gen(sys.argv[1])")
+        return io.write(str(m))
+
+    def branch_directory(self, d):
+        self.emit_directory(d)
+        for f in d.files:
+            if isinstance(f, Directory):
+                self.branch_directory(f)
+            else:
+                self.emit_file(f)
+
+    def emit_directory(self, d):
+        m = self.m
+        m.from_("os.path", "exists")
+        m.from_("os", "mkdir")
+        with m.unless("exists({})".format(self.virtualpath(d))):
+            m.stmt("logger.info('[d] create: %s', {})".format(self.virtualpath(d)))
+            m.stmt("mkdir({})".format(self.virtualpath(d)))
+
+    def emit_file(self, f):
+        m = self.m
+        m.stmt("logger.info('[f] create: %s', {})".format(self.virtualpath(f)))
+        with m.with_("open({}, 'w')".format(self.virtualpath(f)), as_="wf"):
+            f.io.seek(0)
+            m.stmt("wf.write('{}')".format(f.io.read()))
 
 
 class FilegenApplication(object):
     def parse(self, argv):
         import argparse
         parser = argparse.ArgumentParser()
-        parser.add_argument("--action", choices=["file", "python", "string", "default"], default="default")
-        parser.add_argument("root")
+        parser.add_argument("--action", choices=["file", "python", "string", "code", "default"], default="default")
+        parser.add_argument("root", nargs="?", default=".")
         return parser.parse_args(argv)
 
     def run(self, fg, *args, **kwargs):
@@ -158,6 +213,8 @@ class FilegenApplication(object):
             return PythonModuleMaker().emit(fg)
         elif args.action == "file":
             return DirectoryMaker().emit(fg)
+        elif args.action == "code":
+            return CodeGenerator(fg).emit()
         else:
             return Writer().emit(fg)
 
@@ -167,5 +224,5 @@ if __name__ == "__main__":
         with fg.file("bar.py") as wf:
             wf.write("# this is comment file")
         with fg.file("readme.txt") as wf:
-            wf.write("# foo")
+            wf.write(u"いろはにほへと　ちりぬるを わかよたれそ　つねならむ うゐのおくやま　けふこえて あさきゆめみし　ゑひもせす")
     FilegenApplication().run(fg)
