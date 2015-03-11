@@ -15,9 +15,7 @@ except IOError:
     README = CHANGES = ''
 
 
-install_requires = [
-    'prestring',
-]
+install_requires = []
 
 
 docs_extras = [
@@ -27,6 +25,10 @@ tests_require = [
 ]
 
 testing_extras = tests_require + [
+]
+
+codegen_extras = [
+    'prestring',
 ]
 
 setup(name='filegen',
@@ -48,9 +50,9 @@ setup(name='filegen',
       extras_require={
           'testing': testing_extras,
           'docs': docs_extras,
+          'codegen': codegen_extras
       },
       tests_require=tests_require,
       test_suite="filegen.tests",
       entry_points="""
 """)
-

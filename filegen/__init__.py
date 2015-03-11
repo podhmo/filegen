@@ -2,13 +2,11 @@
 import sys
 import contextlib
 import os.path
-import shutil
 if int(sys.version[0]) >= 3:
     from io import StringIO as IO
 else:
     from io import BytesIO as IO
 from collections import namedtuple
-from prestring.python import PythonModule
 import logging
 logger = logging.getLogger(__name__)
 
@@ -92,10 +90,10 @@ class Writer(object):
     def emit_directory(self, d, indent):
         self.output("{}d:{}".format(" " * indent, d.path))
         for f in d.files:
-            if isinstance(f, Directory):
-                self.emit_directory(f, indent + 1)
-            else:
+            if hasattr(f, "io"):
                 self.emit_file(f, indent + 1)
+            else:
+                self.emit_directory(f, indent + 1)
 
     def emit_file(self, f, indent):
         padding = " " * indent
@@ -118,21 +116,21 @@ class DirectoryMaker(object):
     def emit_directory(self, d):
         if not os.path.exists(str(d.path)):
             logger.info('[d] create: %s', d.path)
-            os.mkdir(str(d.path))
+            os.makedirs(str(d.path))
 
     def branch_directory(self, d):
         self.emit_directory(d)
         for f in d.files:
-            if isinstance(f, Directory):
-                self.branch_directory(f)
-            else:
+            if hasattr(f, "io"):
                 self.emit_file(f)
+            else:
+                self.branch_directory(f)
 
     def emit_file(self, f):
         logger.info('[f] create: %s', f.path)
         with open(str(f.path), "w") as wf:
             f.io.seek(0)
-            shutil.copyfileobj(f.io, wf)
+            wf.write(f.io.read())
 
     def emit(self, fg):
         self.branch_directory(fg.frame[0])
@@ -148,55 +146,6 @@ class PythonModuleMaker(DirectoryMaker):
                 pass
 
 
-class CodeGenerator(object):
-    def __init__(self, fg, varname="rootpath", m=None):
-        self.fg = fg
-        self.rootpath = str(fg.frame[0].path)
-        self.varname = varname
-        self.m = m or PythonModule(import_unique=True)
-
-    def virtualpath(self, f):
-        self.m.from_("os.path", "join")
-        return "join({}, '{}')".format(self.varname, str(f.path).replace(self.rootpath, "").lstrip("/"))
-
-    def emit(self, io=sys.stdout):
-        m = self.m
-        m.import_("sys")
-        m.import_("logging")
-        m.stmt("logger = logging.getLogger(__name__)")
-        m.sep()
-
-        with m.def_("gen", self.varname):
-            self.branch_directory(fg.frame[0])
-        with m.main():
-            m.stmt("logging.basicConfig(level=logging.INFO)")
-            m.stmt("gen(sys.argv[1])")
-        return io.write(str(m))
-
-    def branch_directory(self, d):
-        self.emit_directory(d)
-        for f in d.files:
-            if isinstance(f, Directory):
-                self.branch_directory(f)
-            else:
-                self.emit_file(f)
-
-    def emit_directory(self, d):
-        m = self.m
-        m.from_("os.path", "exists")
-        m.from_("os", "mkdir")
-        with m.unless("exists({})".format(self.virtualpath(d))):
-            m.stmt("logger.info('[d] create: %s', {})".format(self.virtualpath(d)))
-            m.stmt("mkdir({})".format(self.virtualpath(d)))
-
-    def emit_file(self, f):
-        m = self.m
-        m.stmt("logger.info('[f] create: %s', {})".format(self.virtualpath(f)))
-        with m.with_("open({}, 'w')".format(self.virtualpath(f)), as_="wf"):
-            f.io.seek(0)
-            m.stmt("wf.write('{}')".format(f.io.read()))
-
-
 class FilegenApplication(object):
     def parse(self, argv):
         import argparse
@@ -208,21 +157,36 @@ class FilegenApplication(object):
     def run(self, fg, *args, **kwargs):
         import sys
         args = self.parse(sys.argv[1:])
-        fg.change(args.root)
         if args.action == "python":
+            if callable(fg):
+                fg = fg()
+            fg.change(args.root)
             return PythonModuleMaker().emit(fg)
         elif args.action == "file":
+            if callable(fg):
+                fg = fg()
+            fg.change(args.root)
             return DirectoryMaker().emit(fg)
         elif args.action == "code":
-            return CodeGenerator(fg).emit()
+            from filegen.codegen import CodeGenerator
+            return CodeGenerator(fg, args.root).emit()
         else:
+            if callable(fg):
+                fg = fg()
+            fg.change(args.root)
             return Writer().emit(fg)
 
+
 if __name__ == "__main__":
-    fg = Filegen()
-    with fg.dir("foo"):
-        with fg.file("bar.py") as wf:
-            wf.write("# this is comment file")
-        with fg.file("readme.txt") as wf:
-            wf.write(u"いろはにほへと　ちりぬるを わかよたれそ　つねならむ うゐのおくやま　けふこえて あさきゆめみし　ゑひもせす")
-    FilegenApplication().run(fg)
+    def closure():
+        from filegen.asking import AskString
+        fg = Filegen()
+        with fg.dir("foo"):
+            with fg.file(AskString("comment-file-name")) as wf:
+                wf.write("# {} is wrote\n\n".format(AskString("yourname", description="what is your name?")))
+                wf.write("# this is comment file")
+            with fg.file("readme.txt") as wf:
+                wf.write("{} is wrote\n\n".format(AskString("yourname", description="hmm")))
+                wf.write(u"いろはにほへと　ちりぬるを わかよたれそ　つねならむ うゐのおくやま　けふこえて あさきゆめみし　ゑひもせす")
+        return fg
+    FilegenApplication().run(closure)
