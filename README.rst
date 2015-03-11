@@ -46,13 +46,13 @@ Writing a script file such as below.
               wf.write("# this is comment file")
           with fg.file("readme.txt") as wf:
               wf.write("# foo")
-      FilegenApplication().run(fg.to_string)
+      FilegenApplication().run(fg)
 
 then.
 
 .. code-block:: shell
 
-  $ python myscript.py /tmp
+  $ python myscript.py --action=string /tmp
   d:/tmp
    d:/tmp/foo
     f:/tmp/foo/bar.py
@@ -61,7 +61,7 @@ then.
     f:/tmp/foo/readme.txt
       # foo
 
-  $ python myscript.py /foo/bar
+  $ python myscript.py --action=string /foo/bar
   d:/foo/bar
    d:/foo/bar/foo
     f:/foo/bar/foo/bar.py

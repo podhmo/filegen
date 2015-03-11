@@ -9,6 +9,7 @@ else:
     from io import BytesIO as IO
 from collections import namedtuple
 
+
 Directory = namedtuple("Directory", "name path files")
 File = namedtuple("File", "name path io")
 
@@ -142,13 +143,23 @@ class PythonModuleMaker(DirectoryMaker):
 
 
 class FilegenApplication(object):
-    def run(self, method, *args, **kwargs):
+    def parse(self, argv):
+        import argparse
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--action", choices=["file", "python", "string", "default"], default="default")
+        parser.add_argument("root")
+        return parser.parse_args(argv)
+
+    def run(self, fg, *args, **kwargs):
         import sys
-        try:
-            curdir = sys.argv[1]
-        except IndexError:
-            curdir = os.getcwd()
-        method(curdir=curdir, **kwargs)
+        args = self.parse(sys.argv[1:])
+        fg.change(args.root)
+        if args.action == "python":
+            return PythonModuleMaker().emit(fg)
+        elif args.action == "file":
+            return DirectoryMaker().emit(fg)
+        else:
+            return Writer().emit(fg)
 
 if __name__ == "__main__":
     fg = Filegen()
@@ -157,4 +168,4 @@ if __name__ == "__main__":
             wf.write("# this is comment file")
         with fg.file("readme.txt") as wf:
             wf.write("# foo")
-    FilegenApplication().run(fg.to_string)
+    FilegenApplication().run(fg)
