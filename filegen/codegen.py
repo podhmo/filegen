@@ -122,6 +122,8 @@ class CodeGenerator(object):
     def __init__(self, fg, rootpath, varname="rootpath", m=None):
         self.fg = fg
         self.varname = varname
+        if rootpath == ".":
+            rootpath = "./"
         self.rootpath = rootpath
         self.m = m or PythonModule(import_unique=True)
         self.toplevel = self.m.submodule()
