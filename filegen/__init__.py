@@ -183,11 +183,11 @@ if __name__ == "__main__":
         from filegen.asking import AskString
         fg = Filegen()
         with fg.dir("foo"):
-            with fg.file(AskString("comment-file-name")) as wf:
-                wf.write("# {} is wrote\n\n".format(AskString("yourname", description="what is your name?")))
+            with fg.file(AskString("comment-file-name", default="comment.txt")) as wf:
+                wf.write("# {} is wrote\n\n".format(AskString("yourname", description="what is your name?", default="foo")))
                 wf.write("# this is comment file")
             with fg.file("readme.txt") as wf:
-                wf.write("{} is wrote\n\n".format(AskString("yourname", description="hmm")))
+                wf.write("{} is wrote\n\n".format(AskString("yourname", description="hmm", default="foo")))
                 wf.write(u"いろはにほへと　ちりぬるを わかよたれそ　つねならむ うゐのおくやま　けふこえて あさきゆめみし　ゑひもせす")
         return fg
     FilegenApplication().run(closure)

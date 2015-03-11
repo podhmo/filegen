@@ -34,7 +34,7 @@ codegen_extras = [
 ]
 
 setup(name='filegen',
-      version='0.1.4',
+      version='0.2.0',
       description='file structure generator with onefile script',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
