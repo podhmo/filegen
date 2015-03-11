@@ -23,7 +23,7 @@ class AskStringCache(object):
         default = self.default_map.get(name)
         self.err.write(self.prompt.format(varname=name, description=description, default=default))
         self.err.flush()
-        value = self.inp.readline().rstrip()
+        value = self.inp.readline().rstrip() or self.default_map.get(name, "")
         self.cache[name] = value
         return value
 
