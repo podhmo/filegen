@@ -156,13 +156,14 @@ class FilegenApplication(object):
 
     def run(self, fg, *args, **kwargs):
         import sys
+        logging.basicConfig(level=logging.INFO)
         args = self.parse(sys.argv[1:])
         if args.action == "python":
             if callable(fg):
                 fg = fg()
             fg.change(args.root)
             return PythonModuleMaker().emit(fg)
-        elif args.action == "file":
+        elif args.action == "file" or args.action == "default":
             if callable(fg):
                 fg = fg()
             fg.change(args.root)
