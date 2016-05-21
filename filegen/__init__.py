@@ -147,17 +147,19 @@ class PythonModuleMaker(DirectoryMaker):
 
 
 class FilegenApplication(object):
-    def parse(self, argv):
+    default_action = "default"
+
+    def parse(self):
         import argparse
         parser = argparse.ArgumentParser()
-        parser.add_argument("--action", choices=["file", "python", "string", "code", "default"], default="default")
+        choices = ["file", "python", "string", "code", "default"]
+        parser.add_argument("--action", choices=choices, default=self.default_action)
         parser.add_argument("root", nargs="?", default=".")
-        return parser.parse_args(argv)
+        return parser.parse_args()
 
     def run(self, fg, *args, **kwargs):
-        import sys
         logging.basicConfig(level=logging.INFO)
-        args = self.parse(sys.argv[1:])
+        args = self.parse()
 
         if args.action == "python":
             if callable(fg):
