@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
 import os
-import sys
 
 
 from setuptools import setup, find_packages
@@ -34,17 +33,18 @@ codegen_extras = [
 ]
 
 setup(name='filegen',
-      version='0.2.0',
+      version='0.2.1',
       description='file structure generator with onefile script',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
           "Programming Language :: Python",
           "Programming Language :: Python :: Implementation :: CPython",
       ],
-      keywords='',
-      author="",
+      keywords='filegen, file generation, scaffold',
+      author="podhmo",
       author_email="",
       url="https://github.com/podhmo/filegen",
+      license="mit",
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
